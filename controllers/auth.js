@@ -9,6 +9,9 @@ const api_key = process.env.STREAM_API_KEY;
 const api_secret = process.env.STREAM_API_SECRET;
 const app_id = process.env.STREAM_APP_ID;
 
+const getAvatarURL = (req, file) => (
+    `${req.protocol}://${req.get('host')}/uploads/avatars/${file.filename}`
+);
 
 const signup = async (req, res) => {
     try {
@@ -18,9 +21,7 @@ const signup = async (req, res) => {
             return res.status(400).json({ message: 'Password is required' });
         }
 
-        const avatarURL = req.file
-            ? `${req.protocol}://${req.get('host')}/uploads/avatars/${req.file.filename}`
-            : undefined;
+        const avatarURL = req.file ? getAvatarURL(req, req.file) : undefined;
         console.log('AVATAR URL: ',avatarURL);
         const userId = crypto.randomBytes(16).toString('hex');
 
@@ -70,4 +71,29 @@ const login = async (req, res) => {
 
 };
 
-module.exports = {signup, login}
+const updateProfilePicture = async (req, res) => {
+    try {
+        if (!req.user?.id) {
+            return res.status(401).json({ message: 'Authentication required' });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ message: 'Profile picture is required' });
+        }
+
+        const avatarURL = getAvatarURL(req, req.file);
+
+        const client = StreamChat.getInstance(api_key, api_secret);
+        await client.partialUpdateUser({
+            id: req.user.id,
+            set: { image: avatarURL },
+        });
+
+        return res.status(200).json({ avatarURL });
+    } catch (error) {
+        console.error('Profile picture update failed:', error);
+        return res.status(500).json({ message: 'Could not update profile picture' });
+    }
+};
+
+module.exports = {signup, login, updateProfilePicture}

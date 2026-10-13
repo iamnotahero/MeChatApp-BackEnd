@@ -4,7 +4,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const { signup, login } = require('../controllers/auth.js');
+const { signup, login, updateProfilePicture} = require('../controllers/auth.js');
+const { authenticate } = require('../middleware/auth.js');
 
 const router = express.Router();
 const uploadDirectory = path.join(__dirname, '..', 'uploads', 'avatars');
@@ -39,7 +40,12 @@ const upload = multer({
 
 router.post('/signup', upload.single('avatarURL'), signup);
 router.post('/login', upload.single('avatarURL'), login);
-
+router.patch(
+    '/profile-picture',
+    authenticate,
+    upload.single('avatarURL'),
+    updateProfilePicture
+);
 router.use((error, req, res, next) => {
     if (error instanceof multer.MulterError) {
         return res.status(400).json({ message: error.message });
